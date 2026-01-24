@@ -4,7 +4,12 @@ This page documents the changes in each Kimi CLI release.
 
 ## Unreleased
 
+- Shell: Cache pasted images to disk for persistence across sessions
+- Shell: Fix display of image/audio/video attachments in message history
 - Shell: Handle Ctrl-C during slash command execution
+- Shell: Fix shlex parsing error in shell mode when input contains invalid shell syntax
+- Shell: Fix stderr output from MCP servers and third-party libraries polluting shell UI
+- Wire: Graceful shutdown with proper cleanup of pending requests when connection closes or Ctrl-C is received
 
 ## 0.84 (2026-01-22)
 
