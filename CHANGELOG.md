@@ -11,6 +11,10 @@ Only write entries that are worth mentioning to users.
 
 ## Unreleased
 
+- Core: Fix subagent approval request handling
+
+## 0.88 (2026-01-26)
+
 - MCP: Remove `Mcp-Session-Id` header when connecting to MCP servers to fix compatibility
 
 ## 0.87 (2026-01-25)
