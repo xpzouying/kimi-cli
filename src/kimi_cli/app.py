@@ -12,6 +12,7 @@ from kaos.path import KaosPath
 from pydantic import SecretStr
 
 from kimi_cli.agentspec import DEFAULT_AGENT_FILE
+from kimi_cli.auth.oauth import OAuthManager
 from kimi_cli.cli import InputFormat, OutputFormat
 from kimi_cli.config import Config, LLMModel, LLMProvider, load_config
 from kimi_cli.llm import augment_provider_with_env_vars, create_llm
@@ -106,6 +107,8 @@ class KimiCLI:
             config.loop_control.max_ralph_iterations = max_ralph_iterations
         logger.info("Loaded config: {config}", config=config)
 
+        oauth = OAuthManager(config)
+
         model: LLMModel | None = None
         provider: LLMProvider | None = None
 
@@ -131,13 +134,19 @@ class KimiCLI:
         # determine thinking mode
         thinking = config.default_thinking if thinking is None else thinking
 
-        llm = create_llm(provider, model, thinking=thinking, session_id=session.id)
+        llm = create_llm(
+            provider,
+            model,
+            thinking=thinking,
+            session_id=session.id,
+            oauth=oauth,
+        )
         if llm is not None:
             logger.info("Using LLM provider: {provider}", provider=provider)
             logger.info("Using LLM model: {model}", model=model)
             logger.info("Thinking mode: {thinking}", thinking=thinking)
 
-        runtime = await Runtime.create(config, llm, session, yolo, skills_dir)
+        runtime = await Runtime.create(config, oauth, llm, session, yolo, skills_dir)
 
         if agent_file is None:
             agent_file = DEFAULT_AGENT_FILE
@@ -187,7 +196,7 @@ class KimiCLI:
         merge_wire_messages: bool = False,
     ) -> AsyncGenerator[WireMessage]:
         """
-        Run the Kimi CLI instance without any UI and yield Wire messages directly.
+        Run the Kimi Code CLI instance without any UI and yield Wire messages directly.
 
         Args:
             user_input (str | list[ContentPart]): The user input to the agent.
@@ -230,7 +239,7 @@ class KimiCLI:
                 await soul_task
 
     async def run_shell(self, command: str | None = None) -> bool:
-        """Run the Kimi CLI instance with shell UI."""
+        """Run the Kimi Code CLI instance with shell UI."""
         from kimi_cli.ui.shell import Shell, WelcomeInfoItem
 
         welcome_info = [
@@ -259,7 +268,7 @@ class KimiCLI:
             welcome_info.append(
                 WelcomeInfoItem(
                     name="Model",
-                    value="not set, send /setup to configure",
+                    value="not set, send /login to login",
                     level=WelcomeInfoItem.Level.WARN,
                 )
             )
@@ -291,7 +300,7 @@ class KimiCLI:
         *,
         final_only: bool = False,
     ) -> bool:
-        """Run the Kimi CLI instance with print UI."""
+        """Run the Kimi Code CLI instance with print UI."""
         from kimi_cli.ui.print import Print
 
         async with self._env():
@@ -305,7 +314,7 @@ class KimiCLI:
             return await print_.run(command)
 
     async def run_acp(self) -> None:
-        """Run the Kimi CLI instance as ACP server."""
+        """Run the Kimi Code CLI instance as ACP server."""
         from kimi_cli.ui.acp import ACP
 
         async with self._env():
@@ -313,7 +322,7 @@ class KimiCLI:
             await acp.run()
 
     async def run_wire_stdio(self) -> None:
-        """Run the Kimi CLI instance as Wire server over stdio."""
+        """Run the Kimi Code CLI instance as Wire server over stdio."""
         from kimi_cli.wire.server import WireServer
 
         async with self._env():
