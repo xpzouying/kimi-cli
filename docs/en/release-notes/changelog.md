@@ -4,6 +4,14 @@ This page documents the changes in each Kimi Code CLI release.
 
 ## Unreleased
 
+## 1.1 (2026-01-27)
+
+- LLM: Fix `kimi-for-coding` model's capabilities
+
+## 1.0 (2026-01-27)
+
+- Shell: Add `/login` and `/logout` slash commands for login and logout
+- CLI: Add `kimi login` and `kimi logout` subcommands
 - Core: Fix subagent approval request handling
 
 ## 0.88 (2026-01-26)
