@@ -295,6 +295,9 @@ export function useSessionStream(
     new Map(),
   );
 
+  // Track if current turn is a /clear command (needs UI clear on turn end)
+  const pendingClearRef = useRef(false);
+
   // Wrapped setMessages
   const setMessages: typeof setMessagesInternal = useCallback((action) => {
     setMessagesInternal(action);
@@ -715,6 +718,7 @@ export function useSessionStream(
     currentToolCallsRef.current.clear();
     currentToolCallIdRef.current = null;
     pendingApprovalRequestsRef.current.clear();
+    pendingClearRef.current = false;
     setCurrentStep(0);
     setContextUsage(0);
     setTokenUsage(null);
@@ -735,12 +739,20 @@ export function useSessionStream(
     (event: WireEvent, isReplay = false, rpcMessageId?: string | number) => {
       switch (event.type) {
         case "TurnBegin": {
+          // Reset step state to ensure slash commands create new messages
+          resetStepState();
+
           const parsedUserInput = parseUserInput(event.payload.user_input);
 
           // Track that at least one turn has started (for auto-rename trigger)
           if (!isReplay) {
             hasTurnStartedRef.current = true;
           }
+
+          // Check if this is a /clear or /reset command (needs UI clear)
+          const userText = parsedUserInput.text.trim();
+          pendingClearRef.current =
+            userText === "/clear" || userText === "/reset";
 
           // Add user message
           const userMessageId = getNextMessageId("user");
@@ -1215,6 +1227,21 @@ export function useSessionStream(
               messageId,
             });
           }
+
+          // Clear UI for /clear command (triggered by StatusUpdate after clear)
+          if (pendingClearRef.current) {
+            pendingClearRef.current = false;
+            setMessages((prev) => {
+              let lastUserMsgIndex = -1;
+              for (let i = prev.length - 1; i >= 0; i--) {
+                if (prev[i].role === "user") {
+                  lastUserMsgIndex = i;
+                  break;
+                }
+              }
+              return lastUserMsgIndex >= 0 ? prev.slice(lastUserMsgIndex) : [];
+            });
+          }
           break;
         }
 
@@ -1237,10 +1264,39 @@ export function useSessionStream(
         }
 
         case "StepInterrupted": {
+          // Clear pending approval requests
+          pendingApprovalRequestsRef.current.clear();
+
           setMessages((prev) =>
-            prev.map((msg) =>
-              msg.isStreaming ? { ...msg, isStreaming: false } : msg,
-            ),
+            prev.map((msg) => {
+              let updated = msg;
+              if (msg.isStreaming) {
+                updated = { ...updated, isStreaming: false };
+              }
+              // Update pending approval tool states to denied
+              if (
+                msg.variant === "tool" &&
+                msg.toolCall?.state === "approval-requested"
+              ) {
+                return {
+                  ...updated,
+                  toolCall: {
+                    ...msg.toolCall,
+                    state: "output-denied",
+                    approval: msg.toolCall.approval
+                      ? {
+                          ...msg.toolCall.approval,
+                          submitted: true,
+                          resolved: true,
+                          approved: false,
+                          response: "reject",
+                        }
+                      : undefined,
+                  },
+                };
+              }
+              return updated;
+            }),
           );
           setAwaitingFirstResponse(false);
           if (awaitingIdleRef.current) {
@@ -1252,8 +1308,21 @@ export function useSessionStream(
         }
 
         case "CompactionBegin":
-        case "CompactionEnd":
           // Could show compaction indicator if needed
+          break;
+
+        case "CompactionEnd":
+          // Clear old messages after compaction, only keep the current turn
+          setMessages((prev) => {
+            let lastUserMsgIndex = -1;
+            for (let i = prev.length - 1; i >= 0; i--) {
+              if (prev[i].role === "user") {
+                lastUserMsgIndex = i;
+                break;
+              }
+            }
+            return lastUserMsgIndex >= 0 ? prev.slice(lastUserMsgIndex) : [];
+          });
           break;
 
         default:
@@ -1734,9 +1803,70 @@ export function useSessionStream(
       );
       awaitingIdleRef.current = false;
       pendingMessageRef.current = null;
+      // Clear pending approval requests and update message states
+      pendingApprovalRequestsRef.current.clear();
+      setMessages((prev) =>
+        prev.map((msg) => {
+          if (
+            msg.variant === "tool" &&
+            msg.toolCall?.state === "approval-requested"
+          ) {
+            return {
+              ...msg,
+              isStreaming: false,
+              toolCall: {
+                ...msg.toolCall,
+                state: "output-denied",
+                approval: msg.toolCall.approval
+                  ? {
+                      ...msg.toolCall.approval,
+                      submitted: true,
+                      resolved: true,
+                      approved: false,
+                      response: "reject",
+                    }
+                  : undefined,
+              },
+            };
+          }
+          return msg;
+        }),
+      );
       disconnect();
       return;
     }
+
+    // Clear all pending approval requests and update message states
+    pendingApprovalRequestsRef.current.clear();
+
+    // Always update messages (consistent with StepInterrupted handler)
+    setMessages((prev) =>
+      prev.map((msg) => {
+        if (
+          msg.variant === "tool" &&
+          msg.toolCall?.state === "approval-requested"
+        ) {
+          return {
+            ...msg,
+            isStreaming: false,
+            toolCall: {
+              ...msg.toolCall,
+              state: "output-denied",
+              approval: msg.toolCall.approval
+                ? {
+                    ...msg.toolCall.approval,
+                    submitted: true,
+                    resolved: true,
+                    approved: false,
+                    response: "reject",
+                  }
+                : undefined,
+            },
+          };
+        }
+        return msg;
+      }),
+    );
 
     const cancelMessage: JsonRpcRequest = {
       jsonrpc: "2.0",
@@ -1756,7 +1886,7 @@ export function useSessionStream(
     } catch (err) {
       console.error("[SessionStream] Failed to send cancel request:", err);
     }
-  }, [status, disconnect, setAwaitingFirstResponse]);
+  }, [status, disconnect, setAwaitingFirstResponse, setMessages]);
 
   // Reconnect
   const reconnect = useCallback(() => {
