@@ -4,6 +4,10 @@ This page documents the changes in each Kimi Code CLI release.
 
 ## Unreleased
 
+## 1.13.0 (2026-02-24)
+
+- Core: Add automatic connection recovery that recreates the HTTP client on connection and timeout errors before retrying, improving resilience against transient network failures
+
 ## 1.12.0 (2026-02-11)
 
 - Web: Add subagent activity rendering to display subagent steps (thinking, tool calls, text) inside Task tool messages
