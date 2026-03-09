@@ -4,7 +4,9 @@ This page documents the changes in each Kimi Code CLI release.
 
 ## Unreleased
 
+- Shell: Enhance `Ctrl-V` clipboard paste to support video files in addition to images — video file paths are inserted as text, and a crash when clipboard data is `None` is fixed
 - Core: Pass session ID as `user_id` metadata to Anthropic API
+- Web: Preserve slash commands on WebSocket reconnect and add automatic retry logic for session initialization
 
 ## 1.17.0 (2026-03-03)
 
