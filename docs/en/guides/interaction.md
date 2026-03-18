@@ -45,7 +45,7 @@ When plan mode is active, the prompt changes to `📋` and a blue `plan` badge a
 
 When the AI finishes its plan, it submits it for approval via `ExitPlanMode`. The approval panel shows the full plan content, and you can:
 
-- **Approve**: Accept the plan, exit plan mode, and let the AI begin execution
+- **Approve / select an approach**: If the plan contains multiple alternative implementation paths, the AI lists 2–3 labeled options (e.g. "Option A", "Option B (Recommended)") for you to choose from — selecting one exits plan mode and tells the AI which path to follow. If the plan has a single path, an **Approve** button is shown instead.
 - **Reject**: Decline the plan, stay in plan mode, and provide feedback via conversation
 - **Revise**: Enter revision notes — the AI will update the plan and resubmit
 
@@ -80,6 +80,8 @@ Thinking mode requires support from the current model. Some models (like `kimi-k
 While the AI is executing a task, you can type and send follow-up messages in the input box without waiting for the current turn to finish. This feature is called "steering" and allows you to adjust the AI's direction mid-turn.
 
 Steer messages are appended to the context after the current step completes, and the AI will see and respond to your message before the next step begins. Approval requests and question panels are also handled inline with keyboard navigation during agent execution.
+
+Any text you type in the input box during a turn but haven't yet submitted is preserved when the turn ends — it won't be lost. You can press `Enter` to send it as the next message, or continue editing.
 
 ::: tip
 Steer messages do not interrupt the AI's currently executing step — they are processed between steps. To interrupt immediately, use `Ctrl-C`.
