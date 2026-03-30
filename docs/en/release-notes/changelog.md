@@ -4,6 +4,20 @@ This page documents the changes in each Kimi Code CLI release.
 
 ## Unreleased
 
+## 1.28.0 (2026-03-30)
+
+- Core: Fix file write/replace tools freezing the event loop — diff computation (`build_diff_blocks`) is now offloaded to a thread via `asyncio.to_thread`, preventing the UI from hanging when editing large files
+- Shell: Fix `_watch_root_wire_hub` silently dying on handler exceptions — the watcher now catches and logs exceptions (matching the pattern in `wire/server.py`) and handles `QueueShutDown` gracefully, preventing approval flow from silently breaking mid-session
+- Core: Skip O(n²) diff computation for huge files (>10 000 lines) — files above the threshold now show a summary block instead of computing a full diff, and unchanged files short-circuit immediately
+- Wire: Add `is_summary` field to `DiffDisplayBlock` (Wire 1.8) — marks diff blocks that contain a line-count summary instead of actual diff content, allowing clients to render them appropriately
+- Web: Render large-file diff summaries — when a diff block is marked `is_summary`, the web UI shows a compact "File too large for inline diff" notice with line counts instead of attempting to compute a diff
+- Auth: Fix OAuth users getting "incorrect API KEY" when running skills or after idle — 401 errors now show a clear "please /login" message instead of the raw API error; the ACP layer correctly triggers re-login flow for VS Code extension users
+- Web: Fix session title generation always failing for OAuth users — the title generator now uses OAuth tokens and refreshes them before calling the model
+- Core: Add timeout protection for Agent tool and HTTP requests — all `aiohttp` sessions now default to 120 s total / 60 s read timeout; the Agent tool gains an optional `timeout` parameter (foreground default 10 min, background default 15 min); background agent tasks are marked `timed_out` on expiry with proper notification semantics
+- Grep: Fix tool hanging and becoming uninterruptible — replaced blocking `ripgrepy.run()` with async subprocess execution; the tool now responds to Ctrl-C immediately and has a 20-second timeout with partial result return
+- Grep: Add token efficiency improvements — default `head_limit` of 250 with `offset` pagination, `--hidden` search with VCS directory exclusion, `files_with_matches` sorted by modification time, relative path output, and `--max-columns 500` for non-content modes
+- Grep: `line_number` (`-n`) now defaults to `true` in content mode — line numbers are included by default so the model can reference precise code locations
+- Grep: `count_matches` mode now includes a summary in the message — e.g. "Found 30 total occurrences across 10 files."
 - ACP: Fix `ValueError: list.index(x): x not in list` crash when ACP is launched via `kimi-code` or `kimi-cli` entry-points (e.g. JetBrains AI Assistant)
 - Core: Fix OpenAI-compatible APIs (e.g. One API) returning 400 errors in multi-turn conversations when the server returns `reasoning_content` by default — `reasoning_effort` is now auto-set to `"medium"` when history contains thinking content and `reasoning_key` is configured
 - Shell: Add `/theme` command and dark/light theme support — users with light terminal backgrounds can now switch to a light color palette via `/theme light` or `theme = "light"` in `config.toml`; diff highlights, task browser, prompt UI, and MCP status colors all adapt to the selected theme

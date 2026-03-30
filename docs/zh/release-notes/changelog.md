@@ -4,6 +4,20 @@
 
 ## 未发布
 
+## 1.28.0 (2026-03-30)
+
+- Core：修复文件写入/替换工具冻结事件循环的问题——diff 计算（`build_diff_blocks`）现在通过 `asyncio.to_thread` 转移到线程中执行，防止编辑大文件时 UI 卡死
+- Shell：修复 `_watch_root_wire_hub` 在处理异常时静默退出的问题——观察者现在会捕获并记录异常（与 `wire/server.py` 中的模式一致），并优雅处理 `QueueShutDown`，防止审批流程在会话中途静默中断
+- Core：对超大文件（>10000 行）跳过 O(n²) diff 计算——超过阈值的文件现在显示摘要块而非计算完整 diff，未变化的文件会立即短路返回
+- Wire：为 `DiffDisplayBlock` 新增 `is_summary` 字段（Wire 1.8）——标记包含行数摘要而非实际 diff 内容的块，便于客户端做差异化渲染
+- Web：渲染大文件 diff 摘要——当 diff 块标记为 `is_summary` 时，Web UI 显示紧凑的"文件过大无法内联 diff"提示及行数，而非尝试计算 diff
+- Auth：修复 OAuth 用户执行 Skill 或空闲后出现 "incorrect API KEY" 的问题——401 错误现在会显示清晰的 "请 /login" 提示，而不是原始的 API 错误信息；ACP 层会正确触发 VS Code 扩展的重新登录流程
+- Web：修复 OAuth 用户的会话标题生成始终失败的问题——标题生成器现在会使用 OAuth 令牌，并在调用模型前刷新过期令牌
+- Core：为 Agent 工具和 HTTP 请求添加超时保护——所有 `aiohttp` 会话现在默认 120 秒总超时 / 60 秒读取超时；Agent 工具新增可选 `timeout` 参数（前台默认 10 分钟，后台默认 15 分钟）；后台 Agent 任务超时后标记为 `timed_out` 并正确触发通知
+- Grep：修复工具卡死且无法中断的问题——将阻塞的 `ripgrepy.run()` 替换为异步子进程执行；工具现在可响应 Ctrl-C 立即中断，并设有 20 秒超时保护，超时后返回部分结果
+- Grep：新增 Token 效率优化——默认 `head_limit` 为 250 并支持 `offset` 分页、启用 `--hidden` 搜索同时排除 VCS 目录、`files_with_matches` 按修改时间排序、输出相对路径、非 content 模式限制最大列宽 500
+- Grep：content 模式的 `line_number`（`-n`）现在默认为 `true`——默认包含行号，以便模型引用精确的代码位置
+- Grep：`count_matches` 模式现在在 message 中包含汇总信息——例如 "Found 30 total occurrences across 10 files."
 - ACP：修复通过 `kimi-code` 或 `kimi-cli` 入口启动 ACP 时 `ValueError: list.index(x): x not in list` 崩溃的问题（如 JetBrains AI Assistant 场景）
 - Core：修复 OpenAI 兼容 API（如 One API）在多轮对话中返回 400 错误的问题——当服务端默认返回 `reasoning_content` 时，现在会在历史消息包含思考内容且配置了 `reasoning_key` 的情况下自动设置 `reasoning_effort` 为 `"medium"`
 - Shell：新增 `/theme` 命令和深色/浅色主题支持——使用浅色终端背景的用户可通过 `/theme light` 或在 `config.toml` 中设置 `theme = "light"` 切换到浅色配色方案；diff 高亮、任务浏览器、提示符 UI 和 MCP 状态颜色均会跟随所选主题自动适配
