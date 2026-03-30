@@ -17,6 +17,7 @@ from pydantic import (
 from tomlkit.exceptions import TOMLKitError
 
 from kimi_cli.exception import ConfigError
+from kimi_cli.hooks.config import HookDef
 from kimi_cli.llm import ModelCapability, ProviderType
 from kimi_cli.share import get_share_dir
 from kimi_cli.utils.logging import logger
@@ -189,6 +190,10 @@ class Config(BaseModel):
         default="",
         description="Default external editor command (e.g. 'vim', 'code --wait')",
     )
+    theme: Literal["dark", "light"] = Field(
+        default="dark",
+        description="Terminal color theme. Use 'light' for light terminal backgrounds.",
+    )
     models: dict[str, LLMModel] = Field(default_factory=dict, description="List of LLM models")
     providers: dict[str, LLMProvider] = Field(
         default_factory=dict, description="List of LLM providers"
@@ -202,6 +207,7 @@ class Config(BaseModel):
     )
     services: Services = Field(default_factory=Services, description="Services configuration")
     mcp: MCPConfig = Field(default_factory=MCPConfig, description="MCP configuration")
+    hooks: list[HookDef] = Field(default_factory=list, description="Hook definitions")  # pyright: ignore[reportUnknownVariableType]
 
     @model_validator(mode="after")
     def validate_model(self) -> Self:

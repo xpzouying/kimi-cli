@@ -25,6 +25,7 @@ def test_default_config_dump():
             "default_thinking": False,
             "default_yolo": False,
             "default_editor": "",
+            "theme": "dark",
             "models": {},
             "providers": {},
             "loop_control": {
@@ -50,6 +51,7 @@ def test_default_config_dump():
             },
             "services": {"moonshot_search": None, "moonshot_fetch": None},
             "mcp": {"client": {"tool_call_timeout_ms": 60000}},
+            "hooks": [],
         }
     )
 
