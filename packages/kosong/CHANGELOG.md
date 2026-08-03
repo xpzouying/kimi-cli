@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.56.0 (2026-08-03)
+
+- Anthropic: Omit the `anthropic-beta` header when no beta features are declared instead of sending it with an empty value — adaptive thinking removes the interleaved-thinking beta, which previously left an empty header value that some backends reject
+
 ## 0.55.0 (2026-07-16)
 
 - Kimi: Stop automatically sending the legacy `reasoning_effort` parameter when configuring thinking — requests now use `thinking.type` exclusively while preserving explicit legacy passthrough
